@@ -27,7 +27,7 @@ func getFileName() string {
 	return fileName
 }
 
-func getAlertData(fileName string) map[string]int {
+func getAlertData(fileName string) (map[string]int, int) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		fmt.Printf("Failed reading data from file: \n%v\n\n\n", err)
@@ -37,7 +37,7 @@ func getAlertData(fileName string) map[string]int {
 
 	rows, err := csv.NewReader(file).ReadAll()
 
-	return countDuplicates(rows)
+	return countDuplicates(rows), len(rows) - 1
 }
 
 func getIndexOf(list []string, key string) int {
@@ -75,8 +75,8 @@ func countDuplicates(rows [][]string) map[string]int {
 	return alerts
 }
 
-func printAlertData(alerts map[string]int) {
-	fmt.Println("\n\n\n Total Unique PagerDuty Alerts: ", len(alerts), "\n\n\n", "Count of duplicates of each alert: \n")
+func printAlertData(alerts map[string]int, totalAlerts int) {
+	fmt.Println("\n\n\nTotal PagerDuty Alerts: ", totalAlerts, "\nTotal Unique PagerDuty Alerts: ", len(alerts), "\n\n\n", "Count of duplicates of each alert: \n")
 	for name, count := range alerts {
 		if count == 0 {
 			continue
@@ -85,8 +85,37 @@ func printAlertData(alerts map[string]int) {
 	}
 }
 
+func deleteFileIfApplicable(fileName string) {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("\n\nDo you want to delete the CSV file (Y/N) ?: ")
+
+	choice, err := reader.ReadString('\n')
+
+	if err != nil {
+		fmt.Printf("\n\nFailed while taking input: \n%v\n\n\n", err)
+		os.Exit(1)
+	}
+
+	choice = strings.ToUpper(strings.Trim(choice, " \n"))
+	if choice == "Y" || choice == "YES" {
+		deleteFile(fileName)
+	}
+}
+
+func deleteFile(fileName string) {
+	err := os.Remove(fileName)
+
+    if err != nil {
+        fmt.Printf("\n\nFailed while deleting the file: \n%v\n\n\n", err)
+		os.Exit(1)
+    }
+
+	fmt.Println("File deleted successfully")
+}
+
 func main() {
 	fileName := getFileName()
-	alerts := getAlertData(fileName)
-	printAlertData(alerts)
+	alerts, totalAlerts := getAlertData(fileName)
+	printAlertData(alerts, totalAlerts)
+	deleteFileIfApplicable(fileName)
 }
